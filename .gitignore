@@ -1,0 +1,5 @@
+index_freq
+*.png
+*.json
+.idea
+.ipynb_checkpoints
