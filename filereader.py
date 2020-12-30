@@ -31,7 +31,17 @@ def get_basic_info(file):
     return ret
 
 
-def search(root, targets, reuslt, exclude=None, prefix=None):
+def search(root, targets, reuslt, exclude=None, prefix=None, appendix=None):
+    """
+    search desired file in given directory recurrently,exclude and prefix has a relative higher privilege than targets
+    :param appendix: optional container for additional information of files like AP,AE,SPEED...
+    :param root: search directory
+    :param targets: list of str search keys
+    :param reuslt: container of result
+    :param exclude: list of str search exclude keys
+    :param prefix: prefix of file name
+    :return:
+    """
     if not isinstance(targets, list):
         targets = [targets]
     items = os.listdir(root)
@@ -39,15 +49,21 @@ def search(root, targets, reuslt, exclude=None, prefix=None):
         path = os.path.join(root, item)
         if os.path.isdir(path):
             # print('[-]', path)
-            search(path, targets, reuslt, exclude, prefix)
+            search(path, targets, reuslt, exclude, prefix,appendix)
         # elif item.find(target) != -1:
         #     print('[+]', path)
-        elif any([re.search(target, item) for target in targets]):
+        elif any([re.search(target+"_", item) for target in targets]):
             if exclude and item.endswith(exclude):
                 continue
             if prefix and item.find(prefix) == -1:
                 continue
             #             print('[+]', path)
+            appendixs = item.split("_")
+            if appendix is not None and not appendix.get(appendixs[0],None):
+                appendix.update({appendixs[0]: {
+                    "speed": appendixs[3],
+                    "feed": appendixs[4],
+                    "AP": appendixs[5]}})
             reuslt.append(path)
 
 
@@ -270,7 +286,7 @@ def vib_read_trime(paths, df: pd.DataFrame, ch: tuple):
     pointer = 0
     for row in df.iterrows():
         log.warning(f" {pointer} of {ll}")
-        pointer +=1
+        pointer += 1
         path_load = paths.get(row[1]["index"])
         if not path_load:
             continue
@@ -294,6 +310,7 @@ def vib_read_trime(paths, df: pd.DataFrame, ch: tuple):
 
     return result
 
+
 def vib_read_raw(paths, df: pd.DataFrame, ch: tuple):
     """
     read vibration data with give paths load path
@@ -307,7 +324,7 @@ def vib_read_raw(paths, df: pd.DataFrame, ch: tuple):
     pointer = 0
     for row in df.iterrows():
         log.warning(f" {pointer} of {ll}")
-        pointer +=1
+        pointer += 1
         path_load = paths.get(row[1]["index"])
         if not path_load:
             continue

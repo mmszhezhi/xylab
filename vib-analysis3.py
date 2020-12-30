@@ -23,14 +23,16 @@ def min_max_filter(df, prop):
 
 def get_property(raw):
     lofl = {}
+    ret = {}
     for k,v in raw.items():
         lofl[str(k)] = len(v["vibration-x"])
+        ret[k] = np.mean(v["vibration-x"])
     t= sorted(lofl.items(),key=lambda x:x[1])
     minl = t[0]
     maxl = t[-1]
     df = pd.DataFrame(lofl,index=["value_counts"])
     df = df.transpose()
-    return df,df["value_counts"].value_counts()
+    return df,df["value_counts"].value_counts(),ret
 
 
 
@@ -42,12 +44,13 @@ for tool in tools:
     df = pd.read_csv(tool,index_col=0)
     index_dict = extract_index_dict(df["paths"])
     rawx = vib_read_raw(index_dict,df,('1'))
-    dfindex,prop = get_property(rawx)
+    dfindex,prop,mean_dict = get_property(rawx)
     selected = min_max_filter(dfindex,prop)
     for i in selected.index:
         data = rawx.get(int(i))
-        index_freq[i] = {"vibration-x":np.abs(np.fft.fft(data["vibration-x"])[:math.ceil(len(data["vibration-x"]) *0.5)]).tolist()}
+        shifted = np.array(data['vibration-x']) - mean_dict.get(int(i))
+        index_freq[i] = {"vibration-x":np.abs(np.fft.fft(shifted)[:math.ceil(len(shifted) *0.5)]).tolist()}
         print(f"{tool}  {i} of {selected.shape[0]}")
-
+    os.makedirs(os.path.join(root,f"index_freq"),exist_ok=True)
     with open(os.path.join(root,f"index_freq/{name.split('.')[0]}.json"),"w") as f:
         json.dump(index_freq,f)

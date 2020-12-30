@@ -3,3 +3,7 @@ index_freq
 *.json
 .idea
 .ipynb_checkpoints
+summary
+filted_basic_info
+/summary/
+/filted_basic_info/

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import glob,os
 import json
-from filereader import filter,base_filter
+from filereader import filter,base_filter,search
 
 def file_read(file,src):
     with open(os.path.join(src,file)) as f:
@@ -100,6 +100,7 @@ def retrive_recursive(src,dst):
     return dif,dirname,ip
 
 # root = r"D:\xy\data\20201214\192.168.101.10"
+# root = r"D:\xy-repo\data\20201214\192.168.101.10"
 root = r"D:\xy-repo\data\20201214\192.168.101.10"
 cuts = ["T03"]
 channel_names = {'1': 'vibration-x', '2': 'vibration-y', '3': 'vibration-z', '4': 'sound'}
