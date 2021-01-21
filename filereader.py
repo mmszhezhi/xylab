@@ -24,16 +24,19 @@ def get_basic_info(file):
     ret = {}
     data = np.array(data["value"])
     ret["length"] = data.shape
+    # noinspection PyArgumentList
     ret["min"] = data.min()
+    # noinspection PyArgumentList
     ret["max"] = data.max()
     ret["var"] = round(data.var(), 2)
     ret["mean"] = round(data.mean(), 2)
     return ret
 
 
-def search(root, targets, reuslt, exclude=None, prefix=None, appendix=None):
+def search(root, targets, reuslt, exclude=None, prefix=None, appendix=None, index=None):
     """
     search desired file in given directory recurrently,exclude and prefix has a relative higher privilege than targets
+    :param index: target file index ,tuple of two element or list of index,0 at
     :param appendix: optional container for additional information of files like AP,AE,SPEED...
     :param root: search directory
     :param targets: list of str search keys
@@ -42,30 +45,42 @@ def search(root, targets, reuslt, exclude=None, prefix=None, appendix=None):
     :param prefix: prefix of file name
     :return:
     """
-    if not isinstance(targets, list):
-        targets = [targets]
+    if not isinstance(targets, tuple):
+        targets = (targets,)
     items = os.listdir(root)
     for item in items:
         path = os.path.join(root, item)
         if os.path.isdir(path):
             # print('[-]', path)
-            search(path, targets, reuslt, exclude, prefix,appendix)
+            search(path, targets, reuslt, exclude, prefix, appendix, index)
         # elif item.find(target) != -1:
         #     print('[+]', path)
-        elif any([re.search(target+"_", item) for target in targets]):
+        elif any([re.search(target + "_", item) for target in targets]):
+            appendixs = item.split("_")
             if exclude and item.endswith(exclude):
                 continue
             if prefix and item.find(prefix) == -1:
                 continue
+            # if index and isinstance(index, tuple):
+            #     if index[0] == 0 and not (int(appendixs[2]) <= index[1]):
+            #         continue
+            #     if index[1] == 0 and not ((int(appendixs[2]) >= index[0])):
+            #         continue
+            # if not ((int(appendixs[2]) >= index[0]) and (int(appendixs[2]) <= index[1])):
+            if index and not any([((int(appendixs[2]) >= index[0]) and (int(appendixs[2]) <= index[1])),
+                    (index[1] == 0 and ((int(appendixs[2]) >= index[0]))),
+                    (index[0] == 0 and (int(appendixs[2]) <= index[1]))]):
+                continue
             #             print('[+]', path)
-            appendixs = item.split("_")
-            if appendix is not None and not appendix.get(appendixs[0],None):
+
+            if appendix is not None and not appendix.get(appendixs[0], None):
                 appendix.update({appendixs[0]: {
                     "speed": appendixs[3],
                     "feed": appendixs[4],
                     "AP": appendixs[5]}})
             reuslt.append(path)
-
+    # reuslt = sorted(reuslt, key=lambda x: int(os.path.basename(x).split("_")[2]))
+    reuslt.sort(key=lambda x: int(os.path.basename(x).split("_")[2]))
 
 def filter(data):
     df = pd.DataFrame({"load": data})
@@ -101,16 +116,18 @@ def filter(data):
     return df, starts[s], starts[s + 1] + 1
 
 
-def search_total_raw(search_dir, search_list=("T03", "T04", "T05", "T06", "T02", "T01")):
+def search_total_raw(search_dir, search_list=("T03", "T04", "T05", "T06", "T02", "T01"), index=None,cutter_pro=None):
     """
     :return: path of load
     """
     # test_t = [["T03", "T0999"], "T04", "T05", "T06", "T02", "T01"]
     data_dir = "./data"
     data = {}
+    if not isinstance(search_list, tuple):
+        search_list = (search_list,)
     for t in search_list:
         temp = []
-        search(search_dir, t, temp, exclude=".png", prefix="load")
+        search(search_dir, t, temp, exclude=".png", prefix="load", index=index,appendix=cutter_pro)
         if isinstance(t, str):
             data[t] = temp
         else:
@@ -163,6 +180,24 @@ config = {
         "diff": 10
     }
 }
+
+
+def concatnate_load(files):
+    ret = []
+    for fs in files:
+        with open(fs) as f:
+            datas = f.read()
+        data = json.loads(datas)
+        ret = ret + data["value"]
+    return ret
+
+
+def concatnate_vib(files):
+    data = vib_read(files, ("1"))
+    ret = []
+    for k, v in data.items():
+        ret += v["vibration-x"]
+    return ret
 
 
 def get_basic_infos(files):
@@ -240,27 +275,71 @@ def get_filted_data(data):
 
     config = {
         "T02": {
+            "diff": 0.1
+        },
+        "T03": {
+            "diff": 0.1
+        },
+        "T04":{
+            "diff":0.05
+        },
+        "T01": {
+            "diff": 0.05
+        },
+        "T07": {
+            "diff": 0.05
+        },
+    }
+    result = {}
+    for i, (k, v) in enumerate(data.items()):
+        t = get_basic_infos(data[k])
+        if t is None:
+            continue
+        df = pd.DataFrame(t)
+        df.sort_values(by=["index"], inplace=True)
+        df["mean10"] = mean10(df)
+        diff = config.get(k, {}).get("diff", 0)
+        if diff:
+            df = df.loc[np.where((df["mean"] - df["mean10"]) / df["mean10"] < -diff, False, True)]
+        result[k] = df
+    return result
+
+
+def get_break_points(data):
+    """
+    get filted data
+    :param data: path of load
+    :return:
+    """
+
+    def mean10(df):
+        m10 = []
+        for i in range(len(df["mean"])):
+            m10.append(np.mean(df["mean"][i - 10:i])) if i - 10 >= 0 else m10.append(0)
+        return m10
+
+    config = {
+        "T02": {
             "diff": 15
         },
         "T03": {
             "diff": 150
         }
     }
-    dif_ratio = 0.1
+    dif_ratio = 0.5
     result = {}
     for i, (k, v) in enumerate(data.items()):
         t = get_basic_infos(data[k])
         df = pd.DataFrame(t)
         df.sort_values(by=["index"], inplace=True)
         df["mean10"] = mean10(df)
-        diff = config.get(k, {}).get("diff", 0)
-        if diff:
-            df = df.loc[np.where((df["mean"] - df["mean10"]) / df["mean10"] < -dif_ratio, False, True)]
+        # diff = config.get(k, {}).get("diff", 0)
+        df = df.loc[np.where((df["mean"] - df["mean10"]) / df["mean10"] > dif_ratio, True, False)]
         result[k] = df
     return result
 
 
-def extract_index_dict(data: list):
+def extract_index_dict(data: list,filters=None):
     """
     :param data: path of load
     :return:
@@ -268,8 +347,10 @@ def extract_index_dict(data: list):
     result = {}
     for item in data:
         filename = os.path.basename(item)
-        index = filename.split("_")[2]
-        result[int(index)] = item
+        index = int(filename.split("_")[2])
+        if filters and index not in filters:
+            continue
+        result[index] = item
     return result
 
 
@@ -313,7 +394,7 @@ def vib_read_trime(paths, df: pd.DataFrame, ch: tuple):
 
 def vib_read_raw(paths, df: pd.DataFrame, ch: tuple):
     """
-    read vibration data with give paths load path
+    read vibration data with give paths load path and specific index of file df["index"]
     :param paths: paths of load {}
     :param df: df of tool includ index,trims
     :param ch: chnnel of vibration ("1","2","3")
@@ -343,6 +424,40 @@ def vib_read_raw(paths, df: pd.DataFrame, ch: tuple):
         else:
             result[row[1]["index"]] = ret
 
+    return result
+
+
+def vib_read(paths, ch=("1",)):
+    """
+    read vibration data with give paths load path
+    :param paths: paths of load {}
+    :param ch: chnnel of vibration ("1","2","3")
+    :return:
+    """
+    result = {}
+    pointer = 0
+    ll = len(paths)
+    for path_load in paths:
+        log.warning(f"load vibration data {pointer} of {ll}")
+        pointer += 1
+        if not path_load:
+            continue
+        if not ch:
+            continue
+        ret = {}
+        bname = os.path.basename(path_load)
+        index = bname.split("_")[2]
+        for c in ch:
+            vib = channel_names.get(c, None)
+            vib_path = path_load.replace("load", vib)
+            try:
+                t = file_read(vib_path)
+            except:
+                log.debug(f"file not find {vib_path}")
+                break
+            ret[vib] = t
+        else:
+            result[index] = ret
     return result
 
 

@@ -6,11 +6,12 @@ from operator import add
 width = 0.3
 
 i = 0
-df = pd.read_csv("data-base-5.csv",index_col=0)
-df.drop(columns=["index"], inplace=True)
+df = pd.read_csv("data-base-7.csv",index_col=0)
+# df.drop(columns=["index"], inplace=True)
 # df = pd.DataFrame({"kiko":[2,3,10],"herman":[3,4,5]})
 ind = df.columns
 sums = [0]*df.shape[1]
+plt.figure(figsize=(16,9))
 for row in df.iterrows():
     i += 1
     print(i, sums)

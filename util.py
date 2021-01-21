@@ -23,8 +23,7 @@ def draw_image(files,src,dst):
                 print("ff")
             print(f"{p} of {len(file2draw)}")
             p += 1
-            temp = {}
-            temp["load"] = file_read(item,src)
+            temp = {"load": file_read(item, src)}
             for k,v in channel_names.items():
                 if v == "sound":
                     continue
@@ -101,8 +100,10 @@ def retrive_recursive(src,dst):
 
 # root = r"D:\xy\data\20201214\192.168.101.10"
 # root = r"D:\xy-repo\data\20201214\192.168.101.10"
-root = r"D:\xy-repo\data\20201214\192.168.101.10"
-cuts = ["T03"]
+root = r"D:\xy-repo\data\20201218\192.168.101.10"
+root = r"C:\repo2021\xyrepo\data\20201218\192.168.101.10"
+root = r"C:\repo2021\xyrepo\data\20201218\192.168.101.10"
+cuts = ["T01"]
 channel_names = {'1': 'vibration-x', '2': 'vibration-y', '3': 'vibration-z', '4': 'sound'}
 if __name__ == '__main__':
     for c in cuts:

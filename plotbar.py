@@ -16,7 +16,7 @@ ind = np.arange(N)  # the x locations for the groups
 width = 0.35  # the width of the bars: can also be len(x) sequence
 p1 = plt.bar(ind, S, width)
 # p1 = plt.bar(ind, S, width, color='#d62728')  # , yerr=menStd)
-p2 = plt.bar(ind, C, width, bottom=S)  # , yerr=womenStd)
+p2 = plt.bar(ind, C, width, bottom=S)  # , year=womenStd)
 p3 = plt.bar(ind, M, width, bottom=d)
 k = (10, 11, 7, 11, 8, 6, 6, 5, 3, 3, 7, 5, 9)
 

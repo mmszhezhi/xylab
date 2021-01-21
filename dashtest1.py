@@ -16,6 +16,5 @@ camera = dict(
     eye=dict(x=0., y=2.5, z=0.)
 )
 
-
 fig.update_layout(scene_camera=camera, title=name)
 fig.show()
